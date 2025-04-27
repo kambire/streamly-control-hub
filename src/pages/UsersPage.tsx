@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -82,7 +81,7 @@ const UsersPage = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={user.status === 'Active' ? 'success' : 'destructive'} className={user.status === 'Active' ? 'bg-green-500' : ''}>
+                        <Badge variant={user.status === 'Active' ? 'success' : 'destructive'}>
                           {user.status}
                         </Badge>
                       </TableCell>
