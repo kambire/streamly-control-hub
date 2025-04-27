@@ -14,7 +14,11 @@ import {
   LayoutDashboard,
   Server,
   Link2,
-  Key
+  Key,
+  ChartBar,
+  RefreshCw,
+  Mail,
+  Video
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -30,17 +34,21 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { title: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { title: 'Users Management', href: '/users', icon: Users },
-  { title: 'Control Panel', href: '/control', icon: Settings },
-  { title: 'Player Options', href: '/player', icon: Play },
-  { title: 'Video on Demand', href: '/vod', icon: FileVideo },
-  { title: 'Store', href: '/store', icon: Store },
-  { title: 'Payment Gateways', href: '/payments', icon: CreditCard },
-  { title: 'WHMCS Integration', href: '/whmcs', icon: Link2 },
+  { title: 'Usuarios', href: '/users', icon: Users },
+  { title: 'Planes & Servicios', href: '/plans', icon: CreditCard },
+  { title: 'Estadísticas', href: '/stats', icon: ChartBar },
+  { title: 'Panel de Control', href: '/control', icon: Settings },
+  { title: 'Reproductor', href: '/player', icon: Play },
+  { title: 'Video On Demand', href: '/vod', icon: FileVideo },
+  { title: 'Tienda', href: '/store', icon: Store },
+  { title: 'Pasarelas de Pago', href: '/payments', icon: CreditCard },
+  { title: 'Control de Streams', href: '/streams', icon: RefreshCw },
+  { title: 'Servidor de Correo', href: '/mail', icon: Mail },
+  { title: 'Integración WHMCS', href: '/whmcs', icon: Link2 },
   { title: 'API', href: '/api', icon: Server },
   { title: 'Firewall', href: '/firewall', icon: Shield },
-  { title: 'Domain Security', href: '/security', icon: Key },
-  { title: 'Reports', href: '/reports', icon: FileText },
+  { title: 'Seguridad de Dominio', href: '/security', icon: Key },
+  { title: 'Reportes', href: '/reports', icon: FileText },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
@@ -110,7 +118,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
           )}
         >
           <Settings className="h-5 w-5" />
-          {open && <span className="ml-3">Settings</span>}
+          {open && <span className="ml-3">Configuración</span>}
         </Link>
       </div>
     </aside>
