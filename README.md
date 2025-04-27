@@ -71,3 +71,91 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+
+## Ubuntu 22.04 Installation Guide
+
+### Prerequisites
+1. A fresh Ubuntu 22.04 LTS server
+2. Root or sudo access
+3. Domain name pointed to your server (optional)
+
+### Manual Installation Steps
+
+1. **Update System & Install Dependencies**
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y curl git nginx nodejs npm certbot python3-certbot-nginx
+```
+
+2. **Install Node Version Manager (nvm)**
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+source ~/.bashrc
+nvm install 20
+nvm use 20
+```
+
+3. **Clone the Repository**
+```bash
+git clone <YOUR_GIT_URL>
+cd <YOUR_PROJECT_NAME>
+```
+
+4. **Install Dependencies**
+```bash
+npm install
+```
+
+5. **Build the Application**
+```bash
+npm run build
+```
+
+6. **Configure Nginx**
+```bash
+sudo nano /etc/nginx/sites-available/streamly
+```
+
+Add this configuration:
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+    
+    location / {
+        proxy_pass http://localhost:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+7. **Enable the Site**
+```bash
+sudo ln -s /etc/nginx/sites-available/streamly /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+8. **SSL Certificate (Optional)**
+```bash
+sudo certbot --nginx -d your-domain.com
+```
+
+9. **Start the Application**
+```bash
+npm run dev
+```
+
+### Automatic Installation Script
+
+You can also use our automatic installation script:
+
+```bash
+wget https://raw.githubusercontent.com/your-repo/install.sh
+chmod +x install.sh
+sudo ./install.sh
+```
