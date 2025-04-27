@@ -6,24 +6,27 @@ import {
   Users, 
   Settings, 
   Play, 
-  FileVideo, 
+  FileVideo,
   Store, 
   CreditCard,
   Shield, 
   FileText, 
   LayoutDashboard,
   Server,
-  Link2,
-  Key,
   ChartBar,
   RefreshCw,
   Mail,
-  Video
+  Database
 } from 'lucide-react';
 
 interface SidebarProps {
   open: boolean;
   setOpen: (open: boolean) => void;
+}
+
+interface NavSection {
+  title: string;
+  items: NavItem[];
 }
 
 interface NavItem {
@@ -32,23 +35,46 @@ interface NavItem {
   icon: React.ElementType;
 }
 
-const navItems: NavItem[] = [
-  { title: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { title: 'Usuarios', href: '/users', icon: Users },
-  { title: 'Planes & Servicios', href: '/plans', icon: CreditCard },
-  { title: 'Estadísticas', href: '/stats', icon: ChartBar },
-  { title: 'Panel de Control', href: '/control', icon: Settings },
-  { title: 'Reproductor', href: '/player', icon: Play },
-  { title: 'Video On Demand', href: '/vod', icon: FileVideo },
-  { title: 'Tienda', href: '/store', icon: Store },
-  { title: 'Pasarelas de Pago', href: '/payments', icon: CreditCard },
-  { title: 'Control de Streams', href: '/streams', icon: RefreshCw },
-  { title: 'Servidor de Correo', href: '/mail', icon: Mail },
-  { title: 'Integración WHMCS', href: '/whmcs', icon: Link2 },
-  { title: 'API', href: '/api', icon: Server },
-  { title: 'Firewall', href: '/firewall', icon: Shield },
-  { title: 'Seguridad de Dominio', href: '/security', icon: Key },
-  { title: 'Reportes', href: '/reports', icon: FileText },
+const navSections: NavSection[] = [
+  {
+    title: "Panel Principal",
+    items: [
+      { title: 'Dashboard', href: '/', icon: LayoutDashboard },
+      { title: 'Estadísticas', href: '/stats', icon: ChartBar },
+    ]
+  },
+  {
+    title: "Gestión de Usuarios",
+    items: [
+      { title: 'Usuarios', href: '/users', icon: Users },
+      { title: 'Planes & Servicios', href: '/plans', icon: CreditCard },
+      { title: 'Tienda', href: '/store', icon: Store },
+    ]
+  },
+  {
+    title: "Streaming",
+    items: [
+      { title: 'Control de Streams', href: '/streams', icon: RefreshCw },
+      { title: 'Reproductor', href: '/player', icon: Play },
+      { title: 'Video On Demand', href: '/vod', icon: FileVideo },
+    ]
+  },
+  {
+    title: "Sistema",
+    items: [
+      { title: 'Panel de Control', href: '/control', icon: Settings },
+      { title: 'Servidor de Correo', href: '/mail', icon: Mail },
+      { title: 'Estado del Servidor', href: '/server-status', icon: Server },
+      { title: 'Base de Datos', href: '/database', icon: Database },
+    ]
+  },
+  {
+    title: "Seguridad",
+    items: [
+      { title: 'Firewall', href: '/firewall', icon: Shield },
+      { title: 'Reportes', href: '/reports', icon: FileText },
+    ]
+  }
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
@@ -85,27 +111,38 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
         </div>
       </div>
       
-      <div className="flex-1 overflow-y-auto py-4 px-3">
-        <nav className="space-y-1">
-          {navItems.map((item) => {
-            const isActive = currentPath === item.href;
-            return (
-              <Link
-                key={item.title}
-                to={item.href}
-                className={cn(
-                  "flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  isActive 
-                    ? "bg-sidebar-accent text-primary" 
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground",
-                  !open && "justify-center px-3"
-                )}
-              >
-                <item.icon className={cn("h-5 w-5", isActive && "text-primary")} />
-                {open && <span className="ml-3">{item.title}</span>}
-              </Link>
-            );
-          })}
+      <div className="flex-1 overflow-y-auto py-4">
+        <nav className="space-y-6 px-3">
+          {navSections.map((section, idx) => (
+            <div key={idx} className="space-y-2">
+              {open && (
+                <h2 className="px-3 text-xs font-semibold text-sidebar-foreground/70 uppercase tracking-wider">
+                  {section.title}
+                </h2>
+              )}
+              <div className="space-y-1">
+                {section.items.map((item) => {
+                  const isActive = currentPath === item.href;
+                  return (
+                    <Link
+                      key={item.title}
+                      to={item.href}
+                      className={cn(
+                        "flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                        isActive 
+                          ? "bg-sidebar-accent text-primary" 
+                          : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                        !open && "justify-center px-3"
+                      )}
+                    >
+                      <item.icon className={cn("h-5 w-5", isActive && "text-primary")} />
+                      {open && <span className="ml-3">{item.title}</span>}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
       </div>
       
