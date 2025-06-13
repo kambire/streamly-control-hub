@@ -1,122 +1,138 @@
-# Welcome to your Lovable project
 
-## Project info
+# Streamly Admin Panel
 
-**URL**: https://lovable.dev/projects/2e5d81ee-f797-45a4-90ab-12d60b5faa02
+A modern, responsive admin panel for streaming platform management built with React, TypeScript, and Tailwind CSS.
 
-## How can I edit this code?
+![Streamly Admin Panel](https://via.placeholder.com/800x400/1a1a1a/ffffff?text=Streamly+Admin+Panel)
 
-There are several ways of editing your application.
+## ✨ Features
 
-**Use Lovable**
+- **Dashboard Overview** - Real-time statistics and system monitoring
+- **User Management** - Comprehensive user and subscription management
+- **Streaming Control** - Live stream management and VOD handling
+- **System Administration** - Server status, database, and mail server management
+- **Security Features** - Firewall configuration and reporting tools
+- **Responsive Design** - Mobile-friendly interface with modern UI components
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/2e5d81ee-f797-45a4-90ab-12d60b5faa02) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/2e5d81ee-f797-45a4-90ab-12d60b5faa02) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
-
-## Ubuntu 22.04 Installation Guide
+## 🚀 Quick Start
 
 ### Prerequisites
-1. A fresh Ubuntu 22.04 LTS server
-2. Root or sudo access
-3. Domain name pointed to your server (optional)
 
-### Manual Installation Steps
+- Ubuntu 22.04 LTS (recommended)
+- Node.js 20+ and npm
+- Git
+- Root or sudo access
 
-1. **Update System & Install Dependencies**
+### Automatic Installation
+
+Run our automated installation script:
+
 ```bash
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y curl git nginx nodejs npm certbot python3-certbot-nginx
+curl -fsSL https://raw.githubusercontent.com/your-username/streamly-admin/main/install.sh | sudo bash
 ```
 
-2. **Install Node Version Manager (nvm)**
+Or download and run manually:
+
 ```bash
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
-source ~/.bashrc
-nvm install 20
-nvm use 20
+wget https://raw.githubusercontent.com/your-username/streamly-admin/main/install.sh
+chmod +x install.sh
+sudo ./install.sh
 ```
 
-3. **Clone the Repository**
+### Manual Installation
+
+1. **Clone the repository**
 ```bash
-git clone <YOUR_GIT_URL>
-cd <YOUR_PROJECT_NAME>
+git clone https://github.com/your-username/streamly-admin.git
+cd streamly-admin
 ```
 
-4. **Install Dependencies**
+2. **Install dependencies**
 ```bash
 npm install
 ```
 
-5. **Build the Application**
+3. **Start development server**
+```bash
+npm run dev
+```
+
+4. **Build for production**
 ```bash
 npm run build
 ```
 
-6. **Configure Nginx**
-```bash
-sudo nano /etc/nginx/sites-available/streamly
+## 🛠️ Technology Stack
+
+- **Frontend**: React 18 + TypeScript
+- **Styling**: Tailwind CSS + shadcn/ui
+- **State Management**: TanStack Query
+- **Routing**: React Router v6
+- **Build Tool**: Vite
+- **Icons**: Lucide React
+
+## 📁 Project Structure
+
+```
+src/
+├── components/          # Reusable UI components
+│   ├── layout/         # Layout components (Header, Sidebar, etc.)
+│   └── ui/             # shadcn/ui components
+├── pages/              # Page components
+├── hooks/              # Custom React hooks
+├── lib/                # Utility functions
+└── main.tsx           # Application entry point
 ```
 
-Add this configuration:
+## 🔧 Development
+
+### Available Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
+- `npm run lint` - Run ESLint
+
+### Environment Setup
+
+1. Copy environment template:
+```bash
+cp .env.example .env.local
+```
+
+2. Configure your environment variables:
+```env
+VITE_API_URL=http://localhost:3000/api
+```
+
+## 🚀 Deployment
+
+### Using Docker
+
+```bash
+# Build Docker image
+docker build -t streamly-admin .
+
+# Run container
+docker run -p 8080:8080 streamly-admin
+```
+
+### Using PM2
+
+```bash
+# Install PM2 globally
+npm install -g pm2
+
+# Start application
+pm2 start ecosystem.config.js
+
+# Save PM2 configuration
+pm2 save
+pm2 startup
+```
+
+### Nginx Configuration
+
 ```nginx
 server {
     listen 80;
@@ -129,33 +145,127 @@ server {
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
 ```
 
-7. **Enable the Site**
-```bash
-sudo ln -s /etc/nginx/sites-available/streamly /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl restart nginx
-```
+## 🔄 Updates
 
-8. **SSL Certificate (Optional)**
-```bash
-sudo certbot --nginx -d your-domain.com
-```
-
-9. **Start the Application**
-```bash
-npm run dev
-```
-
-### Automatic Installation Script
-
-You can also use our automatic installation script:
+To update your installation to the latest version:
 
 ```bash
-wget https://raw.githubusercontent.com/your-repo/install.sh
-chmod +x install.sh
-sudo ./install.sh
+# Using update script
+./update.sh
+
+# Or manually
+git pull origin main
+npm install
+npm run build
+sudo systemctl restart streamly
 ```
+
+## 📋 System Requirements
+
+### Minimum Requirements
+- **CPU**: 1 core
+- **RAM**: 1GB
+- **Storage**: 2GB free space
+- **OS**: Ubuntu 20.04+ / CentOS 8+ / Debian 11+
+
+### Recommended Requirements
+- **CPU**: 2+ cores
+- **RAM**: 2GB+
+- **Storage**: 5GB+ free space
+- **Network**: 100Mbps+
+
+## 🔒 Security
+
+- All API endpoints require authentication
+- HTTPS encryption in production
+- CORS protection enabled
+- Rate limiting implemented
+- Input validation and sanitization
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Port 8080 already in use**
+```bash
+sudo lsof -i :8080
+sudo kill -9 <PID>
+```
+
+**Permission denied errors**
+```bash
+sudo chown -R $USER:$USER /var/www/streamly
+```
+
+**Node.js version issues**
+```bash
+nvm install 20
+nvm use 20
+```
+
+### Logs
+
+Check application logs:
+```bash
+# SystemD logs
+sudo journalctl -u streamly -f
+
+# PM2 logs
+pm2 logs streamly
+
+# Nginx logs
+sudo tail -f /var/log/nginx/error.log
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Commit your changes: `git commit -m 'Add amazing feature'`
+4. Push to the branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
+
+### Development Guidelines
+
+- Follow TypeScript best practices
+- Use semantic commit messages
+- Add tests for new features
+- Update documentation as needed
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+- **Documentation**: [Link to docs]
+- **Issues**: [GitHub Issues](https://github.com/your-username/streamly-admin/issues)
+- **Discord**: [Community Server](https://discord.gg/your-server)
+- **Email**: support@streamly.com
+
+## 🗺️ Roadmap
+
+- [ ] Mobile app support
+- [ ] Advanced analytics dashboard
+- [ ] Multi-language support
+- [ ] Plugin system
+- [ ] API documentation
+- [ ] Docker Compose setup
+
+## 🙏 Acknowledgments
+
+- [shadcn/ui](https://ui.shadcn.com/) for the amazing component library
+- [Tailwind CSS](https://tailwindcss.com/) for the utility-first CSS framework
+- [Lucide](https://lucide.dev/) for the beautiful icons
+- [React](https://reactjs.org/) for the powerful UI library
+
+---
+
+Made with ❤️ by the Streamly Team
