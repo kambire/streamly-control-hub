@@ -1,3 +1,4 @@
+
 #!/bin/bash
 
 # Streamly Control Hub - Installation Script
@@ -174,65 +175,104 @@ setup_application() {
     npm install express --save --silent
     npm install -g serve --silent
     
-    # Create a proper production server using ES modules
+    # Create a robust production server using CommonJS to avoid module issues
     cat > "$APP_DIR/server.js" << 'EOF'
-import express from 'express';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const express = require('express');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 const HOST = process.env.HOST || '0.0.0.0';
 
-// Set proper headers for SPA
-app.use(express.static(path.join(__dirname, 'dist'), {
+// Security middleware
+app.disable('x-powered-by');
+
+// Serve static files from dist directory
+const distPath = path.join(__dirname, 'dist');
+app.use(express.static(distPath, {
   maxAge: '1d',
   setHeaders: (res, filePath) => {
-    if (filePath.endsWith('.html')) {
-      res.setHeader('Cache-Control', 'no-cache');
+    if (path.extname(filePath) === '.html') {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
     }
   }
 }));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() });
+  res.status(200).json({ 
+    status: 'healthy', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
 });
 
-// Handle all routes by serving index.html (SPA)
+// API endpoint for testing
+app.get('/api/status', (req, res) => {
+  res.json({ 
+    message: 'Streamly Control Hub API is running',
+    version: '1.0.0',
+    environment: process.env.NODE_ENV || 'production'
+  });
+});
+
+// Serve index.html for all other routes (SPA support)
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  const indexPath = path.join(distPath, 'index.html');
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      console.error('Error serving index.html:', err);
+      res.status(404).send('Application not found');
+    }
+  });
 });
 
-// Error handling
+// Global error handler
 app.use((err, req, res, next) => {
   console.error('Server error:', err);
-  res.status(500).json({ error: 'Internal server error' });
+  res.status(500).json({ 
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+  });
 });
 
+// Start server
 const server = app.listen(PORT, HOST, () => {
-  console.log(`Streamly Control Hub running on http://${HOST}:${PORT}`);
-  console.log(`Health check available at http://${HOST}:${PORT}/health`);
+  console.log(`🚀 Streamly Control Hub running on http://${HOST}:${PORT}`);
+  console.log(`📊 Health check: http://${HOST}:${PORT}/health`);
+  console.log(`🔧 API status: http://${HOST}:${PORT}/api/status`);
+  console.log(`📁 Serving files from: ${distPath}`);
 });
 
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('Received SIGTERM, shutting down gracefully');
+// Graceful shutdown handlers
+const gracefulShutdown = (signal) => {
+  console.log(`\n${signal} received. Shutting down gracefully...`);
   server.close(() => {
-    console.log('Server closed');
+    console.log('Server closed successfully');
     process.exit(0);
   });
+  
+  // Force close after 10 seconds
+  setTimeout(() => {
+    console.error('Could not close connections in time, forcefully shutting down');
+    process.exit(1);
+  }, 10000);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  process.exit(1);
 });
 
-process.on('SIGINT', () => {
-  console.log('Received SIGINT, shutting down gracefully');
-  server.close(() => {
-    console.log('Server closed');
-    process.exit(0);
-  });
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
 });
 EOF
     
