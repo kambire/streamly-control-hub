@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 # Streamly Control Hub - Installation Script
@@ -170,6 +169,30 @@ setup_application() {
     print_info "Building application..."
     npm run build --silent
     
+    # Create a simple server file for production
+    cat > "$APP_DIR/dist/server.js" << 'EOF'
+const express = require('express');
+const path = require('path');
+const app = express();
+const PORT = process.env.PORT || 8080;
+const HOST = process.env.HOST || '0.0.0.0';
+
+// Serve static files from dist directory
+app.use(express.static(path.join(__dirname)));
+
+// Handle all routes by serving index.html (SPA)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.listen(PORT, HOST, () => {
+  console.log(`Streamly Control Hub running on http://${HOST}:${PORT}`);
+});
+EOF
+    
+    # Install express for the server
+    npm install express --save --silent
+    
     print_success "Streamly Control Hub setup completed"
 }
 
@@ -255,7 +278,7 @@ Type=simple
 User=www-data
 Group=www-data
 WorkingDirectory=$APP_DIR
-ExecStart=/usr/bin/npm run preview
+ExecStart=/usr/bin/node $APP_DIR/dist/server.js
 ExecReload=/bin/kill -HUP \$MAINPID
 Restart=always
 RestartSec=10
@@ -270,6 +293,7 @@ NoNewPrivileges=true
 # Environment
 Environment=NODE_ENV=production
 Environment=PORT=8080
+Environment=HOST=0.0.0.0
 
 [Install]
 WantedBy=multi-user.target
@@ -281,9 +305,27 @@ EOF
     # Reload systemd and start service
     systemctl daemon-reload
     systemctl enable streamly --quiet
+    
+    # Wait a moment before starting
+    sleep 2
     systemctl start streamly
     
-    print_success "Systemd service created and started"
+    # Wait for service to start and check status
+    sleep 5
+    if systemctl is-active --quiet streamly; then
+        print_success "Systemd service created and started successfully"
+    else
+        print_warning "Service may not have started correctly, checking..."
+        systemctl status streamly --no-pager -l
+        print_info "Attempting to restart service..."
+        systemctl restart streamly
+        sleep 3
+        if systemctl is-active --quiet streamly; then
+            print_success "Service restarted successfully"
+        else
+            print_error "Service failed to start. Check logs with: journalctl -u streamly -f"
+        fi
+    fi
 }
 
 configure_firewall() {
@@ -326,6 +368,61 @@ setup_ssl() {
     fi
 }
 
+verify_services() {
+    print_info "Verifying services..."
+    
+    # Check if application is responding
+    print_info "Testing application connectivity..."
+    sleep 3
+    
+    local retries=5
+    local count=0
+    
+    while [ $count -lt $retries ]; do
+        if curl -f -s http://localhost:8080 > /dev/null 2>&1; then
+            print_success "Application is responding on port 8080"
+            break
+        else
+            print_warning "Application not responding, attempt $((count + 1))/$retries"
+            sleep 5
+            ((count++))
+        fi
+    done
+    
+    if [ $count -eq $retries ]; then
+        print_error "Application failed to respond after $retries attempts"
+        print_info "Checking service logs..."
+        journalctl -u streamly --lines=20 --no-pager
+        print_info "Attempting manual restart..."
+        systemctl restart streamly
+        sleep 10
+        if curl -f -s http://localhost:8080 > /dev/null 2>&1; then
+            print_success "Application responding after restart"
+        else
+            print_error "Application still not responding. Manual intervention required."
+        fi
+    fi
+    
+    # Test Nginx configuration
+    print_info "Testing Nginx configuration..."
+    if nginx -t; then
+        print_success "Nginx configuration is valid"
+        systemctl reload nginx
+        print_success "Nginx reloaded successfully"
+    else
+        print_error "Nginx configuration test failed"
+    fi
+    
+    # Test full pipeline
+    SERVER_IP=$(curl -s ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')
+    print_info "Testing full request pipeline..."
+    if curl -f -s http://localhost > /dev/null 2>&1; then
+        print_success "Full pipeline test successful"
+    else
+        print_warning "Full pipeline test failed - may need manual configuration"
+    fi
+}
+
 print_completion() {
     SERVER_IP=$(curl -s ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')
     
@@ -342,7 +439,7 @@ print_completion() {
     echo "  • Repository: $REPO_URL"
     echo "  • Service: streamly.service"
     echo "  • Web Server: Nginx (Port 80)"
-    echo "  • App Server: Node.js (Port 8080)"
+    echo "  • App Server: Express.js (Port 8080)"
     echo "  • Firewall: UFW (enabled)"
     
     echo -e "${BLUE}🌐 Access Information:${NC}"
@@ -359,10 +456,36 @@ print_completion() {
     echo -e "${BLUE}🔧 Installed Components:${NC}"
     echo "  • Node.js $(node --version)"
     echo "  • npm $(npm --version)"
+    echo "  • Express.js (production server)"
     echo "  • Nginx $(nginx -v 2>&1 | grep -o 'nginx/[0-9.]*')"
     echo "  • UFW Firewall (active)"
     echo "  • Certbot (for SSL certificates)"
     echo "  • Git (for updates)"
+    
+    echo -e "${BLUE}🔍 Service Status:${NC}"
+    if systemctl is-active --quiet streamly; then
+        echo "  • Streamly Service: ✓ Running"
+    else
+        echo "  • Streamly Service: ✗ Stopped"
+    fi
+    
+    if systemctl is-active --quiet nginx; then
+        echo "  • Nginx Service: ✓ Running"
+    else
+        echo "  • Nginx Service: ✗ Stopped"
+    fi
+    
+    if curl -f -s http://localhost:8080 > /dev/null 2>&1; then
+        echo "  • Application Port 8080: ✓ Responding"
+    else
+        echo "  • Application Port 8080: ✗ Not responding"
+    fi
+    
+    if curl -f -s http://localhost > /dev/null 2>&1; then
+        echo "  • Web Access Port 80: ✓ Working"
+    else
+        echo "  • Web Access Port 80: ✗ Error (check configuration)"
+    fi
     
     echo -e "${BLUE}📋 Useful Commands:${NC}"
     echo "  • Check app status: sudo systemctl status streamly"
@@ -371,27 +494,13 @@ print_completion() {
     echo "  • Update app: sudo ./update.sh"
     echo "  • Check Nginx: sudo systemctl status nginx"
     echo "  • Test Nginx config: sudo nginx -t"
+    echo "  • Test app direct: curl http://localhost:8080"
+    echo "  • Test web access: curl http://localhost"
     
-    echo -e "${BLUE}🔧 Next Steps:${NC}"
-    echo "  1. Open your browser and go to: http://$SERVER_IP"
-    echo "  2. Configure your domain (optional): Edit /etc/nginx/sites-available/streamly"
-    echo "  3. Set up SSL certificate: sudo certbot --nginx -d your-domain.com"
-    echo "  4. Configure streaming settings in the admin panel"
-    echo "  5. Set up user accounts and permissions"
-    
-    echo -e "${BLUE}🔒 Security Recommendations:${NC}"
-    echo "  • Configure authentication for admin access"
-    echo "  • Set up SSL certificate for HTTPS"
-    echo "  • Review and customize firewall rules"
-    echo "  • Enable automatic security updates"
-    echo "  • Regular backup of configuration and data"
-    
-    echo -e "${YELLOW}⚠  Important Notes:${NC}"
-    echo "  • The application runs on port 8080 internally"
-    echo "  • Nginx proxies external traffic from port 80"
-    echo "  • Logs are available via systemctl/journalctl"
-    echo "  • Configuration files are in $APP_DIR"
-    echo "  • Update script is available in current directory"
+    echo -e "${BLUE}🔧 Troubleshooting:${NC}"
+    echo "  • If 502 Error: sudo systemctl restart streamly && sudo systemctl reload nginx"
+    echo "  • Check port 8080: sudo netstat -tlnp | grep :8080"
+    echo "  • View detailed logs: sudo journalctl -u streamly --since '5 minutes ago'"
     
     echo -e "${GREEN}🎉 Streamly Control Hub is now ready to use!${NC}"
     echo -e "${GREEN}   Access it at: http://$SERVER_IP${NC}"
@@ -440,6 +549,7 @@ main() {
     create_systemd_service
     configure_firewall
     setup_ssl
+    verify_services
     
     # Post-installation
     print_completion
