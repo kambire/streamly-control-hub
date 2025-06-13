@@ -1,9 +1,9 @@
 
-# Streamly Admin Panel
+# Streamly Control Hub
 
 A modern, responsive admin panel for streaming platform management built with React, TypeScript, and Tailwind CSS.
 
-![Streamly Admin Panel](https://via.placeholder.com/800x400/1a1a1a/ffffff?text=Streamly+Admin+Panel)
+![Streamly Control Hub](https://via.placeholder.com/800x400/1a1a1a/ffffff?text=Streamly+Control+Hub)
 
 ## ✨ Features
 
@@ -28,13 +28,13 @@ A modern, responsive admin panel for streaming platform management built with Re
 Run our automated installation script:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/your-username/streamly-admin/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/kambire/streamly-control-hub/main/install.sh | sudo bash
 ```
 
 Or download and run manually:
 
 ```bash
-wget https://raw.githubusercontent.com/your-username/streamly-admin/main/install.sh
+wget https://raw.githubusercontent.com/kambire/streamly-control-hub/main/install.sh
 chmod +x install.sh
 sudo ./install.sh
 ```
@@ -43,8 +43,8 @@ sudo ./install.sh
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/your-username/streamly-admin.git
-cd streamly-admin
+git clone https://github.com/kambire/streamly-control-hub.git
+cd streamly-control-hub
 ```
 
 2. **Install dependencies**
@@ -60,6 +60,7 @@ npm run dev
 4. **Build for production**
 ```bash
 npm run build
+npm run preview
 ```
 
 ## 🛠️ Technology Stack
@@ -107,24 +108,41 @@ VITE_API_URL=http://localhost:3000/api
 
 ## 🚀 Deployment
 
-### Using Docker
+### Using the Installation Script
+
+The easiest way to deploy Streamly Control Hub is using our automated installation script:
+
+```bash
+# Basic installation
+curl -fsSL https://raw.githubusercontent.com/kambire/streamly-control-hub/main/install.sh | sudo bash
+
+# With domain and SSL
+curl -fsSL https://raw.githubusercontent.com/kambire/streamly-control-hub/main/install.sh | sudo bash -s -- --domain your-domain.com --email your-email@example.com
+```
+
+### Manual Deployment
+
+#### Using Docker
 
 ```bash
 # Build Docker image
-docker build -t streamly-admin .
+docker build -t streamly-control-hub .
 
 # Run container
-docker run -p 8080:8080 streamly-admin
+docker run -p 8080:8080 streamly-control-hub
 ```
 
-### Using PM2
+#### Using PM2
 
 ```bash
 # Install PM2 globally
 npm install -g pm2
 
+# Build the application
+npm run build
+
 # Start application
-pm2 start ecosystem.config.js
+pm2 start "npm run preview" --name streamly
 
 # Save PM2 configuration
 pm2 save
@@ -158,7 +176,7 @@ To update your installation to the latest version:
 
 ```bash
 # Using update script
-./update.sh
+sudo ./update.sh
 
 # Or manually
 git pull origin main
@@ -206,8 +224,9 @@ sudo chown -R $USER:$USER /var/www/streamly
 
 **Node.js version issues**
 ```bash
-nvm install 20
-nvm use 20
+# Install Node.js 20
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
 ```
 
 ### Logs
@@ -245,19 +264,19 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🆘 Support
 
-- **Documentation**: [Link to docs]
-- **Issues**: [GitHub Issues](https://github.com/your-username/streamly-admin/issues)
-- **Discord**: [Community Server](https://discord.gg/your-server)
+- **Documentation**: [GitHub Repository](https://github.com/kambire/streamly-control-hub)
+- **Issues**: [GitHub Issues](https://github.com/kambire/streamly-control-hub/issues)
 - **Email**: support@streamly.com
 
 ## 🗺️ Roadmap
 
-- [ ] Mobile app support
-- [ ] Advanced analytics dashboard
-- [ ] Multi-language support
-- [ ] Plugin system
+- [ ] Real-time streaming analytics
+- [ ] Multi-server support
+- [ ] Advanced user role management
 - [ ] API documentation
+- [ ] Mobile app companion
 - [ ] Docker Compose setup
+- [ ] Kubernetes deployment
 
 ## 🙏 Acknowledgments
 
@@ -265,7 +284,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Tailwind CSS](https://tailwindcss.com/) for the utility-first CSS framework
 - [Lucide](https://lucide.dev/) for the beautiful icons
 - [React](https://reactjs.org/) for the powerful UI library
+- [Vite](https://vitejs.dev/) for the fast build tool
 
 ---
 
-Made with ❤️ by the Streamly Team
+Made with ❤️ by [kambire](https://github.com/kambire)

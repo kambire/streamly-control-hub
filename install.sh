@@ -1,7 +1,7 @@
 
 #!/bin/bash
 
-# Streamly Admin Panel - Installation Script
+# Streamly Control Hub - Installation Script
 # Compatible with Ubuntu 22.04 LTS
 
 set -e
@@ -17,6 +17,7 @@ NC='\033[0m' # No Color
 APP_NAME="streamly"
 APP_DIR="/var/www/streamly"
 NODE_VERSION="20"
+REPO_URL="https://github.com/kambire/streamly-control-hub.git"
 DOMAIN=""
 SSL_EMAIL=""
 
@@ -24,7 +25,7 @@ SSL_EMAIL=""
 print_header() {
     echo -e "${BLUE}"
     echo "╔══════════════════════════════════════════════════════════════╗"
-    echo "║                    Streamly Admin Panel                      ║"
+    echo "║                 Streamly Control Hub                         ║"
     echo "║                    Installation Script                       ║"
     echo "╚══════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
@@ -81,7 +82,8 @@ install_dependencies() {
         ufw \
         htop \
         unzip \
-        software-properties-common
+        software-properties-common \
+        build-essential
     print_success "Dependencies installed"
 }
 
@@ -103,22 +105,14 @@ install_nodejs() {
 }
 
 setup_application() {
-    print_info "Setting up application directory..."
+    print_info "Setting up Streamly Control Hub..."
     
     # Create application directory
     mkdir -p "$APP_DIR"
     cd "$APP_DIR"
     
-    # Get repository URL from user if not provided
-    if [[ -z "$REPO_URL" ]]; then
-        read -p "Enter your Git repository URL: " REPO_URL
-        if [[ -z "$REPO_URL" ]]; then
-            print_error "Repository URL is required"
-        fi
-    fi
-    
     # Clone repository
-    print_info "Cloning repository..."
+    print_info "Cloning repository from GitHub..."
     git clone "$REPO_URL" .
     
     # Install npm dependencies
@@ -129,7 +123,7 @@ setup_application() {
     print_info "Building application..."
     npm run build
     
-    print_success "Application setup completed"
+    print_success "Streamly Control Hub setup completed"
 }
 
 configure_nginx() {
@@ -201,8 +195,8 @@ create_systemd_service() {
     
     cat > /etc/systemd/system/streamly.service << EOF
 [Unit]
-Description=Streamly Admin Panel
-Documentation=https://github.com/your-username/streamly-admin
+Description=Streamly Control Hub
+Documentation=https://github.com/kambire/streamly-control-hub
 After=network.target
 
 [Service]
@@ -210,7 +204,7 @@ Type=simple
 User=www-data
 Group=www-data
 WorkingDirectory=$APP_DIR
-ExecStart=/usr/bin/npm run dev
+ExecStart=/usr/bin/npm run preview
 ExecReload=/bin/kill -HUP \$MAINPID
 Restart=always
 RestartSec=10
@@ -289,7 +283,9 @@ print_completion() {
     echo -e "${NC}"
     
     echo -e "${BLUE}📊 Installation Summary:${NC}"
-    echo "  • Application: $APP_DIR"
+    echo "  • Application: Streamly Control Hub"
+    echo "  • Directory: $APP_DIR"
+    echo "  • Repository: $REPO_URL"
     echo "  • Service: streamly.service"
     echo "  • Web Server: Nginx"
     echo "  • Firewall: UFW (enabled)"
@@ -336,16 +332,11 @@ main() {
                 SSL_EMAIL="$2"
                 shift 2
                 ;;
-            --repo)
-                REPO_URL="$2"
-                shift 2
-                ;;
             --help)
                 echo "Usage: $0 [OPTIONS]"
                 echo "Options:"
                 echo "  --domain DOMAIN    Domain name for SSL"
                 echo "  --email EMAIL      Email for SSL certificate"
-                echo "  --repo URL         Git repository URL"
                 echo "  --help             Show this help"
                 exit 0
                 ;;

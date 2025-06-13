@@ -1,7 +1,7 @@
 
 #!/bin/bash
 
-# Streamly Admin Panel - Update Script
+# Streamly Control Hub - Update Script
 # Updates the application to the latest version
 
 set -e
@@ -18,12 +18,13 @@ APP_NAME="streamly"
 APP_DIR="/var/www/streamly"
 BACKUP_DIR="/var/backups/streamly"
 SERVICE_NAME="streamly"
+REPO_URL="https://github.com/kambire/streamly-control-hub.git"
 
 # Functions
 print_header() {
     echo -e "${BLUE}"
     echo "╔══════════════════════════════════════════════════════════════╗"
-    echo "║                    Streamly Admin Panel                      ║"
+    echo "║                 Streamly Control Hub                         ║"
     echo "║                      Update Script                           ║"
     echo "╚══════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
@@ -206,7 +207,7 @@ cleanup_old_backups() {
     
     # Keep only last 5 backups
     cd "$BACKUP_DIR"
-    ls -t streamly_backup_*.tar.gz | tail -n +6 | xargs rm -f
+    ls -t streamly_backup_*.tar.gz 2>/dev/null | tail -n +6 | xargs rm -f || true
     
     print_success "Old backups cleaned up"
 }
@@ -218,7 +219,7 @@ rollback() {
     systemctl stop "$SERVICE_NAME" || true
     
     # Find latest backup
-    LATEST_BACKUP=$(ls -t "$BACKUP_DIR"/streamly_backup_*.tar.gz | head -n1)
+    LATEST_BACKUP=$(ls -t "$BACKUP_DIR"/streamly_backup_*.tar.gz 2>/dev/null | head -n1)
     
     if [[ -n "$LATEST_BACKUP" ]]; then
         print_info "Restoring from backup: $LATEST_BACKUP"
@@ -258,6 +259,7 @@ print_completion() {
     echo -e "${BLUE}📊 Update Summary:${NC}"
     echo "  • Previous version: $CURRENT_BRANCH ($CURRENT_COMMIT)"
     echo "  • Current version: $(git -C "$APP_DIR" branch --show-current) ($(git -C "$APP_DIR" rev-parse HEAD))"
+    echo "  • Repository: $REPO_URL"
     echo "  • Backup location: $BACKUP_FILE"
     
     echo -e "${BLUE}🔧 Useful Commands:${NC}"
