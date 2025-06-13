@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 # Streamly Control Hub - Installation Script
@@ -133,7 +132,7 @@ configure_nginx() {
     cp /etc/nginx/sites-available/default /etc/nginx/sites-available/default.backup
     
     # Create Streamly configuration
-    cat > /etc/nginx/sites-available/streamly << EOF
+    cat > /etc/nginx/sites-available/streamly << 'EOF'
 server {
     listen 80;
     server_name _;
@@ -149,19 +148,19 @@ server {
     gzip on;
     gzip_vary on;
     gzip_min_length 1024;
-    gzip_proxied expired no-cache no-store private must-revalidate auth;
+    gzip_proxied expired no-cache no-store private auth;
     gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss;
     
     location / {
         proxy_pass http://localhost:8080;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_cache_bypass \$http_upgrade;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
         
         # Timeout settings
         proxy_connect_timeout 60s;
@@ -276,6 +275,8 @@ setup_ssl() {
 }
 
 print_completion() {
+    SERVER_IP=$(curl -s ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')
+    
     echo -e "${GREEN}"
     echo "╔══════════════════════════════════════════════════════════════╗"
     echo "║                     Installation Complete!                   ║"
@@ -284,37 +285,64 @@ print_completion() {
     
     echo -e "${BLUE}📊 Installation Summary:${NC}"
     echo "  • Application: Streamly Control Hub"
+    echo "  • Version: Latest from GitHub"
     echo "  • Directory: $APP_DIR"
     echo "  • Repository: $REPO_URL"
     echo "  • Service: streamly.service"
-    echo "  • Web Server: Nginx"
+    echo "  • Web Server: Nginx (Port 80)"
+    echo "  • App Server: Node.js (Port 8080)"
     echo "  • Firewall: UFW (enabled)"
     
     echo -e "${BLUE}🌐 Access Information:${NC}"
     if [[ -n "$DOMAIN" ]]; then
-        echo "  • URL: https://$DOMAIN"
+        echo "  • Primary URL: https://$DOMAIN"
+        echo "  • Alternative: http://$DOMAIN"
     else
-        SERVER_IP=$(curl -s ifconfig.me 2>/dev/null || echo "YOUR_SERVER_IP")
-        echo "  • URL: http://$SERVER_IP"
+        echo "  • Primary URL: http://$SERVER_IP"
+        echo "  • Local URL: http://localhost"
     fi
+    echo "  • Default credentials: No authentication required"
+    echo "  • Admin panel: Available at root URL"
+    
+    echo -e "${BLUE}🔧 Installed Components:${NC}"
+    echo "  • Node.js $(node --version)"
+    echo "  • npm $(npm --version)"
+    echo "  • Nginx $(nginx -v 2>&1 | grep -o 'nginx/[0-9.]*')"
+    echo "  • UFW Firewall (active)"
+    echo "  • Certbot (for SSL certificates)"
+    echo "  • Git (for updates)"
     
     echo -e "${BLUE}📋 Useful Commands:${NC}"
-    echo "  • Check status: sudo systemctl status streamly"
-    echo "  • View logs: sudo journalctl -u streamly -f"
+    echo "  • Check app status: sudo systemctl status streamly"
+    echo "  • View app logs: sudo journalctl -u streamly -f"
     echo "  • Restart app: sudo systemctl restart streamly"
-    echo "  • Update app: ./update.sh"
+    echo "  • Update app: sudo ./update.sh"
+    echo "  • Check Nginx: sudo systemctl status nginx"
+    echo "  • Test Nginx config: sudo nginx -t"
     
     echo -e "${BLUE}🔧 Next Steps:${NC}"
-    echo "  1. Configure your domain in Nginx (if not done)"
-    echo "  2. Set up SSL: sudo certbot --nginx -d your-domain.com"
-    echo "  3. Update environment variables if needed"
-    echo "  4. Configure your streaming settings"
+    echo "  1. Open your browser and go to: http://$SERVER_IP"
+    echo "  2. Configure your domain (optional): Edit /etc/nginx/sites-available/streamly"
+    echo "  3. Set up SSL certificate: sudo certbot --nginx -d your-domain.com"
+    echo "  4. Configure streaming settings in the admin panel"
+    echo "  5. Set up user accounts and permissions"
     
-    echo -e "${YELLOW}⚠  Security Notice:${NC}"
-    echo "  • Change default passwords"
-    echo "  • Review firewall settings"
-    echo "  • Enable automatic updates"
-    echo "  • Monitor logs regularly"
+    echo -e "${BLUE}🔒 Security Recommendations:${NC}"
+    echo "  • Configure authentication for admin access"
+    echo "  • Set up SSL certificate for HTTPS"
+    echo "  • Review and customize firewall rules"
+    echo "  • Enable automatic security updates"
+    echo "  • Regular backup of configuration and data"
+    
+    echo -e "${YELLOW}⚠  Important Notes:${NC}"
+    echo "  • The application runs on port 8080 internally"
+    echo "  • Nginx proxies external traffic from port 80"
+    echo "  • Logs are available via systemctl/journalctl"
+    echo "  • Configuration files are in $APP_DIR"
+    echo "  • Update script is available in current directory"
+    
+    echo -e "${GREEN}🎉 Streamly Control Hub is now ready to use!${NC}"
+    echo -e "${GREEN}   Access it at: http://$SERVER_IP${NC}"
 }
 
 # Main installation process
