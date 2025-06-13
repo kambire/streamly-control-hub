@@ -1,3 +1,4 @@
+
 #!/bin/bash
 
 # Streamly Control Hub - Installation Script
@@ -19,6 +20,11 @@ NODE_VERSION="20"
 REPO_URL="https://github.com/kambire/streamly-control-hub.git"
 DOMAIN=""
 SSL_EMAIL=""
+
+# Set non-interactive mode
+export DEBIAN_FRONTEND=noninteractive
+export NEEDRESTART_MODE=a
+export NEEDRESTART_SUSPEND=1
 
 # Functions
 print_header() {
@@ -64,15 +70,43 @@ check_os() {
     fi
 }
 
+configure_noninteractive() {
+    print_info "Configuring non-interactive mode..."
+    
+    # Configure debconf for non-interactive mode
+    echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
+    
+    # Disable needrestart prompts
+    if [[ -f /etc/needrestart/needrestart.conf ]]; then
+        sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
+    fi
+    
+    # Create needrestart config if it doesn't exist
+    mkdir -p /etc/needrestart
+    cat > /etc/needrestart/needrestart.conf << 'EOF'
+# Restart services automatically
+$nrconf{restart} = 'a';
+$nrconf{kernelhints} = 0;
+EOF
+    
+    print_success "Non-interactive mode configured"
+}
+
 update_system() {
     print_info "Updating system packages..."
-    apt update && apt upgrade -y
+    apt-get update -qq
+    apt-get upgrade -y -qq
     print_success "System updated successfully"
 }
 
 install_dependencies() {
     print_info "Installing system dependencies..."
-    apt install -y \
+    
+    # Pre-configure packages to avoid prompts
+    echo "postfix postfix/mailname string localhost" | debconf-set-selections
+    echo "postfix postfix/main_mailer_type string 'No configuration'" | debconf-set-selections
+    
+    apt-get install -y -qq \
         curl \
         git \
         nginx \
@@ -82,7 +116,11 @@ install_dependencies() {
         htop \
         unzip \
         software-properties-common \
-        build-essential
+        build-essential \
+        ca-certificates \
+        gnupg \
+        lsb-release
+    
     print_success "Dependencies installed"
 }
 
@@ -90,11 +128,21 @@ install_nodejs() {
     print_info "Installing Node.js via NodeSource repository..."
     
     # Remove any existing Node.js installations
-    apt remove -y nodejs npm || true
+    apt-get remove -y -qq nodejs npm 2>/dev/null || true
+    apt-get autoremove -y -qq 2>/dev/null || true
     
-    # Install NodeSource repository
-    curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -
-    apt install -y nodejs
+    # Create directory for GPG key
+    mkdir -p /etc/apt/keyrings
+    
+    # Download and add NodeSource GPG key
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+    
+    # Add NodeSource repository
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${NODE_VERSION}.x nodistro main" > /etc/apt/sources.list.d/nodesource.list
+    
+    # Update package list and install Node.js
+    apt-get update -qq
+    apt-get install -y -qq nodejs
     
     # Verify installation
     node_version=$(node --version)
@@ -112,15 +160,15 @@ setup_application() {
     
     # Clone repository
     print_info "Cloning repository from GitHub..."
-    git clone "$REPO_URL" .
+    git clone "$REPO_URL" . --quiet
     
     # Install npm dependencies
     print_info "Installing application dependencies..."
-    npm install
+    npm install --silent --no-progress
     
     # Build application
     print_info "Building application..."
-    npm run build
+    npm run build --silent
     
     print_success "Streamly Control Hub setup completed"
 }
@@ -128,8 +176,11 @@ setup_application() {
 configure_nginx() {
     print_info "Configuring Nginx..."
     
+    # Stop nginx if running
+    systemctl stop nginx 2>/dev/null || true
+    
     # Backup default configuration
-    cp /etc/nginx/sites-available/default /etc/nginx/sites-available/default.backup
+    cp /etc/nginx/sites-available/default /etc/nginx/sites-available/default.backup 2>/dev/null || true
     
     # Create Streamly configuration
     cat > /etc/nginx/sites-available/streamly << 'EOF'
@@ -148,8 +199,8 @@ server {
     gzip on;
     gzip_vary on;
     gzip_min_length 1024;
-    gzip_proxied expired no-cache no-store private auth;
-    gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss;
+    gzip_proxied any;
+    gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss application/javascript application/json;
     
     location / {
         proxy_pass http://localhost:8080;
@@ -183,8 +234,9 @@ EOF
     # Test configuration
     nginx -t || print_error "Nginx configuration test failed"
     
-    systemctl restart nginx
-    systemctl enable nginx
+    # Start and enable nginx
+    systemctl start nginx
+    systemctl enable nginx --quiet
     
     print_success "Nginx configured and started"
 }
@@ -228,7 +280,7 @@ EOF
     
     # Reload systemd and start service
     systemctl daemon-reload
-    systemctl enable streamly
+    systemctl enable streamly --quiet
     systemctl start streamly
     
     print_success "Systemd service created and started"
@@ -238,20 +290,20 @@ configure_firewall() {
     print_info "Configuring UFW firewall..."
     
     # Reset UFW to defaults
-    ufw --force reset
+    ufw --force reset >/dev/null 2>&1
     
     # Default policies
-    ufw default deny incoming
-    ufw default allow outgoing
+    ufw default deny incoming >/dev/null 2>&1
+    ufw default allow outgoing >/dev/null 2>&1
     
     # Allow SSH (be careful not to lock yourself out!)
-    ufw allow ssh
+    ufw allow ssh >/dev/null 2>&1
     
     # Allow HTTP and HTTPS
-    ufw allow 'Nginx Full'
+    ufw allow 'Nginx Full' >/dev/null 2>&1
     
     # Enable firewall
-    ufw --force enable
+    echo "y" | ufw enable >/dev/null 2>&1
     
     print_success "Firewall configured"
 }
@@ -265,7 +317,7 @@ setup_ssl() {
         nginx -t && systemctl reload nginx
         
         # Get SSL certificate
-        certbot --nginx -d "$DOMAIN" --email "$SSL_EMAIL" --agree-tos --non-interactive
+        certbot --nginx -d "$DOMAIN" --email "$SSL_EMAIL" --agree-tos --non-interactive --quiet
         
         print_success "SSL certificate installed"
     else
@@ -377,6 +429,7 @@ main() {
     # Pre-installation checks
     check_root
     check_os
+    configure_noninteractive
     
     # Installation steps
     update_system
