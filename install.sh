@@ -170,29 +170,71 @@ setup_application() {
     print_info "Building application..."
     npm run build --silent
     
-    # Create a simple server file for production
-    cat > "$APP_DIR/dist/server.js" << 'EOF'
+    # Install express globally and locally for the server
+    npm install express --save --silent
+    npm install -g serve --silent
+    
+    # Create a proper production server
+    cat > "$APP_DIR/server.js" << 'EOF'
 const express = require('express');
 const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 8080;
 const HOST = process.env.HOST || '0.0.0.0';
 
-// Serve static files from dist directory
-app.use(express.static(path.join(__dirname)));
+// Set proper headers for SPA
+app.use(express.static(path.join(__dirname, 'dist'), {
+  maxAge: '1d',
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  }
+}));
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() });
+});
 
 // Handle all routes by serving index.html (SPA)
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
-app.listen(PORT, HOST, () => {
+// Error handling
+app.use((err, req, res, next) => {
+  console.error('Server error:', err);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
+const server = app.listen(PORT, HOST, () => {
   console.log(`Streamly Control Hub running on http://${HOST}:${PORT}`);
+  console.log(`Health check available at http://${HOST}:${PORT}/health`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('Received SIGTERM, shutting down gracefully');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('Received SIGINT, shutting down gracefully');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
 });
 EOF
     
-    # Install express for the server
-    npm install express --save --silent
+    # Verify the dist directory exists and has content
+    if [[ ! -d "$APP_DIR/dist" ]] || [[ ! -f "$APP_DIR/dist/index.html" ]]; then
+        print_error "Build failed - dist directory or index.html not found"
+    fi
     
     print_success "Streamly Control Hub setup completed"
 }
@@ -279,7 +321,7 @@ Type=simple
 User=www-data
 Group=www-data
 WorkingDirectory=$APP_DIR
-ExecStart=/usr/bin/node $APP_DIR/dist/server.js
+ExecStart=/usr/bin/node $APP_DIR/server.js
 ExecReload=/bin/kill -HUP \$MAINPID
 Restart=always
 RestartSec=10
@@ -302,31 +344,44 @@ EOF
     
     # Set correct permissions
     chown -R www-data:www-data "$APP_DIR"
+    chmod +x "$APP_DIR/server.js"
     
     # Reload systemd and start service
     systemctl daemon-reload
     systemctl enable streamly --quiet
     
+    # Test the server file before starting service
+    print_info "Testing server configuration..."
+    if ! node -c "$APP_DIR/server.js"; then
+        print_error "Server.js syntax error detected"
+    fi
+    
     # Wait a moment before starting
     sleep 2
     systemctl start streamly
     
-    # Wait for service to start and check status
-    sleep 5
-    if systemctl is-active --quiet streamly; then
-        print_success "Systemd service created and started successfully"
-    else
-        print_warning "Service may not have started correctly, checking..."
-        systemctl status streamly --no-pager -l
-        print_info "Attempting to restart service..."
-        systemctl restart streamly
-        sleep 3
+    # Wait for service to start and check status with retries
+    local retries=3
+    local count=0
+    
+    while [ $count -lt $retries ]; do
+        sleep 5
         if systemctl is-active --quiet streamly; then
-            print_success "Service restarted successfully"
+            print_success "Systemd service created and started successfully"
+            return 0
         else
-            print_error "Service failed to start. Check logs with: journalctl -u streamly -f"
+            print_warning "Service attempt $((count + 1))/$retries failed, checking logs..."
+            journalctl -u streamly --lines=10 --no-pager
+            
+            if [ $count -lt $((retries - 1)) ]; then
+                print_info "Attempting to restart service..."
+                systemctl restart streamly
+            fi
+            ((count++))
         fi
-    fi
+    done
+    
+    print_error "Service failed to start after $retries attempts. Check logs with: journalctl -u streamly -f"
 }
 
 configure_firewall() {
