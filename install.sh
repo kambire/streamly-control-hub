@@ -174,10 +174,15 @@ setup_application() {
     npm install express --save --silent
     npm install -g serve --silent
     
-    # Create a proper production server
+    # Create a proper production server using ES modules
     cat > "$APP_DIR/server.js" << 'EOF'
-const express = require('express');
-const path = require('path');
+import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
 const PORT = process.env.PORT || 8080;
 const HOST = process.env.HOST || '0.0.0.0';
