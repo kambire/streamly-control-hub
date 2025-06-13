@@ -19,6 +19,7 @@ NODE_VERSION="20"
 REPO_URL="https://github.com/kambire/streamly-control-hub.git"
 DOMAIN=""
 SSL_EMAIL=""
+WEB_PORT="7000"  # Changed from 80 to 7000
 
 # Set non-interactive mode
 export DEBIAN_FRONTEND=noninteractive
@@ -206,9 +207,9 @@ configure_nginx() {
     cp /etc/nginx/sites-available/default /etc/nginx/sites-available/default.backup 2>/dev/null || true
     
     # Create Streamly configuration
-    cat > /etc/nginx/sites-available/streamly << 'EOF'
+    cat > /etc/nginx/sites-available/streamly << EOF
 server {
-    listen 80;
+    listen ${WEB_PORT};
     server_name _;
     
     # Security headers
@@ -228,13 +229,13 @@ server {
     location / {
         proxy_pass http://localhost:8080;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
         
         # Timeout settings
         proxy_connect_timeout 60s;
@@ -243,7 +244,7 @@ server {
     }
     
     # Static assets caching
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)\$ {
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
@@ -261,7 +262,7 @@ EOF
     systemctl start nginx
     systemctl enable nginx --quiet
     
-    print_success "Nginx configured and started"
+    print_success "Nginx configured and started on port ${WEB_PORT}"
 }
 
 create_systemd_service() {
@@ -341,13 +342,13 @@ configure_firewall() {
     # Allow SSH (be careful not to lock yourself out!)
     ufw allow ssh >/dev/null 2>&1
     
-    # Allow HTTP and HTTPS
-    ufw allow 'Nginx Full' >/dev/null 2>&1
+    # Allow port 7000 instead of HTTP/HTTPS
+    ufw allow ${WEB_PORT} >/dev/null 2>&1
     
     # Enable firewall
     echo "y" | ufw enable >/dev/null 2>&1
     
-    print_success "Firewall configured"
+    print_success "Firewall configured - port ${WEB_PORT} allowed"
 }
 
 setup_ssl() {
@@ -438,17 +439,17 @@ print_completion() {
     echo "  • Directory: $APP_DIR"
     echo "  • Repository: $REPO_URL"
     echo "  • Service: streamly.service"
-    echo "  • Web Server: Nginx (Port 80)"
+    echo "  • Web Server: Nginx (Port ${WEB_PORT})"
     echo "  • App Server: Express.js (Port 8080)"
     echo "  • Firewall: UFW (enabled)"
     
     echo -e "${BLUE}🌐 Access Information:${NC}"
     if [[ -n "$DOMAIN" ]]; then
-        echo "  • Primary URL: https://$DOMAIN"
-        echo "  • Alternative: http://$DOMAIN"
+        echo "  • Primary URL: https://$DOMAIN:${WEB_PORT}"
+        echo "  • Alternative: http://$DOMAIN:${WEB_PORT}"
     else
-        echo "  • Primary URL: http://$SERVER_IP"
-        echo "  • Local URL: http://localhost"
+        echo "  • Primary URL: http://$SERVER_IP:${WEB_PORT}"
+        echo "  • Local URL: http://localhost:${WEB_PORT}"
     fi
     echo "  • Default credentials: No authentication required"
     echo "  • Admin panel: Available at root URL"
@@ -500,10 +501,11 @@ print_completion() {
     echo -e "${BLUE}🔧 Troubleshooting:${NC}"
     echo "  • If 502 Error: sudo systemctl restart streamly && sudo systemctl reload nginx"
     echo "  • Check port 8080: sudo netstat -tlnp | grep :8080"
+    echo "  • Check port ${WEB_PORT}: sudo netstat -tlnp | grep :${WEB_PORT}"
     echo "  • View detailed logs: sudo journalctl -u streamly --since '5 minutes ago'"
     
     echo -e "${GREEN}🎉 Streamly Control Hub is now ready to use!${NC}"
-    echo -e "${GREEN}   Access it at: http://$SERVER_IP${NC}"
+    echo -e "${GREEN}   Access it at: http://$SERVER_IP:${WEB_PORT}${NC}"
 }
 
 # Main installation process

@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 # Streamly Control Hub - Update Script
@@ -19,6 +18,7 @@ APP_DIR="/var/www/streamly"
 BACKUP_DIR="/var/backups/streamly"
 SERVICE_NAME="streamly"
 REPO_URL="https://github.com/kambire/streamly-control-hub.git"
+WEB_PORT="7000"  # Changed from 80 to 7000
 
 # Functions
 print_header() {
@@ -200,6 +200,13 @@ verify_update() {
     else
         print_warning "Application may not be responding correctly"
     fi
+    
+    # Check if web server responds on port 7000
+    if curl -f -s http://localhost:${WEB_PORT} > /dev/null; then
+        print_success "Web server is responding on port ${WEB_PORT}"
+    else
+        print_warning "Web server may not be responding on port ${WEB_PORT}"
+    fi
 }
 
 cleanup_old_backups() {
@@ -261,11 +268,13 @@ print_completion() {
     echo "  • Current version: $(git -C "$APP_DIR" branch --show-current) ($(git -C "$APP_DIR" rev-parse HEAD))"
     echo "  • Repository: $REPO_URL"
     echo "  • Backup location: $BACKUP_FILE"
+    echo "  • Web Port: ${WEB_PORT}"
     
     echo -e "${BLUE}🔧 Useful Commands:${NC}"
     echo "  • Check status: sudo systemctl status $SERVICE_NAME"
     echo "  • View logs: sudo journalctl -u $SERVICE_NAME -f"
     echo "  • Restart app: sudo systemctl restart $SERVICE_NAME"
+    echo "  • Test web access: curl http://localhost:${WEB_PORT}"
     
     if [[ "$UPDATE_AVAILABLE" == false ]]; then
         echo -e "${GREEN}🎉 Your installation is already up to date!${NC}"
