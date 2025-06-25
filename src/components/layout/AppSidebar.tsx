@@ -89,24 +89,26 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
-      <SidebarHeader className="p-4">
+      <SidebarHeader className="px-4 py-4 border-b">
         <h1 className="text-xl font-bold text-primary">Streamly Admin</h1>
       </SidebarHeader>
       
-      <SidebarContent>
+      <SidebarContent className="px-2 py-4">
         {navSections.map((section, idx) => (
-          <SidebarGroup key={idx}>
-            <SidebarGroupLabel>{section.title}</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
+          <SidebarGroup key={idx} className="mb-6">
+            <SidebarGroupLabel className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              {section.title}
+            </SidebarGroupLabel>
+            <SidebarGroupContent className="mt-2">
+              <SidebarMenu className="space-y-1">
                 {section.items.map((item) => {
                   const isActive = currentPath === item.href;
                   return (
                     <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild isActive={isActive}>
-                        <Link to={item.href}>
-                          <item.icon />
-                          <span>{item.title}</span>
+                      <SidebarMenuButton asChild isActive={isActive} className="px-3 py-2.5 rounded-lg transition-colors">
+                        <Link to={item.href} className="flex items-center gap-3">
+                          <item.icon className="h-4 w-4" />
+                          <span className="text-sm font-medium">{item.title}</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -118,13 +120,13 @@ export function AppSidebar() {
         ))}
       </SidebarContent>
       
-      <SidebarFooter>
+      <SidebarFooter className="border-t p-4">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <Link to="/settings">
-                <Settings />
-                <span>Configuración</span>
+            <SidebarMenuButton asChild className="px-3 py-2.5 rounded-lg">
+              <Link to="/settings" className="flex items-center gap-3">
+                <Settings className="h-4 w-4" />
+                <span className="text-sm font-medium">Configuración</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
